@@ -22,7 +22,7 @@ def identify_items(image):
     
     try:
         response = client.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "user",
@@ -44,7 +44,7 @@ def identify_items(image):
 def generate_recipe(items):
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "user",
