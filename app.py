@@ -62,10 +62,11 @@ def generate_recipe(items):
 def main():
     st.title("Chef's Fridge Recipe Generator")
     
-    uploaded_file = st.file_uploader("Upload fridge image", type=["jpg", "jpeg", "png"])
+    # Use camera input instead of file uploader
+    camera_image = st.camera_input("Take a picture of your fridge contents")
     
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
+    if camera_image is not None:
+        image = Image.open(camera_image)
         st.image(image, caption='Fridge Contents', use_column_width=True)
         
         if st.button('Identify Ingredients'):
@@ -92,7 +93,7 @@ def main():
             else:
                 st.warning("Please select at least one ingredient.")
     else:
-        st.info("Upload an image and identify ingredients to generate a recipe.")
+        st.info("Take a picture of your fridge contents and click 'Identify Ingredients' to start.")
 
 if __name__ == "__main__":
     main()
