@@ -55,14 +55,17 @@ def identify_items(images):
     
     return list(set(all_items))  # Remove duplicates
 
-def generate_recipe(items):
+def generate_recipe(items, diet_preference, cuisine_preference):
     try:
+        diet_instruction = f"The recipe should be {diet_preference.lower()}." if diet_preference != "None" else ""
+        cuisine_instruction = f"The recipe should be {cuisine_preference} cuisine." if cuisine_preference != "Any" else ""
+        
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
                     "role": "user",
-                    "content": f"Create a recipe using these ingredients: {', '.join(items)}. Provide the recipe name, ingredients with quantities, and step-by-step instructions."
+                    "content": f"Create a recipe using these ingredients: {', '.join(items)}. {diet_instruction} {cuisine_instruction} Provide the recipe name, ingredients with quantities, and step-by-step instructions."
                 }
             ],
             max_tokens=500
@@ -136,9 +139,17 @@ def main():
             st.subheader("Final Ingredient List")
             st.write(", ".join(st.session_state.ingredients))
             
+            # Dietary Preferences
+            st.subheader("Dietary Preferences")
+            diet_options = ["None", "Vegetarian", "Vegan", "Gluten-Free", "Keto", "Low-Carb", "Paleo"]
+            diet_preference = st.selectbox("Select dietary preference:", diet_options)
+            
+            cuisine_options = ["Any", "Italian", "Mexican", "Asian", "Mediterranean", "American", "Indian", "French"]
+            cuisine_preference = st.selectbox("Select cuisine preference:", cuisine_options)
+            
             if st.button('Generate Recipe'):
                 with st.spinner('Crafting your recipe...'):
-                    recipe = generate_recipe(st.session_state.ingredients)
+                    recipe = generate_recipe(st.session_state.ingredients, diet_preference, cuisine_preference)
                     st.subheader("Your Recipe")
                     st.write(recipe)
         else:
