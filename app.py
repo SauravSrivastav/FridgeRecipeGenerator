@@ -3,9 +3,14 @@ from PIL import Image
 import io
 import base64
 from openai import OpenAI
+import os
+from dotenv import load_dotenv
 
-# Set up OpenAI client with the provided API key
-client = OpenAI(api_key="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")
+# Load environment variables
+load_dotenv()
+
+# Set up OpenAI client with the API key from environment variable
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Set page config
 st.set_page_config(page_title="Chef's Fridge Recipe Generator", page_icon="🍳", layout="wide")
