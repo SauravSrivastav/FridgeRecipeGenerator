@@ -14,7 +14,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Set page config
-st.set_page_config(page_title="EKFC Flight Catering Recipe Generator", layout="wide")
+st.set_page_config(page_title="Chef's Fridge Recipe Generator", layout="wide")
 
 def image_hash(image):
     return str(imagehash.average_hash(image))
@@ -40,7 +40,7 @@ def identify_items(images):
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": "List all the food items you can see in this image of airline catering ingredients. Provide the list in a comma-separated format."},
+                            {"type": "text", "text": "List all the food items you can see in this fridge image. Provide the list in a comma-separated format."},
                             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                         ]
                     }
@@ -55,30 +55,20 @@ def identify_items(images):
     
     return list(set(all_items))  # Remove duplicates
 
-def generate_recipe(items, flight_type, class_type, dietary_requirements, destination):
+def generate_recipe(items, diet_preference, cuisine_preference):
     try:
-        prompt = f"""Create a recipe suitable for {flight_type} flight catering in {class_type} class, 
-        flying to {destination}. The recipe should meet these dietary requirements: {dietary_requirements}.
-        Use these ingredients: {', '.join(items)}. 
-        Consider factors like:
-        - Ease of serving in-flight
-        - Food safety and preservation for long flights
-        - Cultural preferences of the destination
-        - Appropriate portion sizes for airline meals
-        - Minimal use of strong odors or messy foods
-        
-        Provide the recipe name, ingredients with quantities, step-by-step instructions, and any special 
-        packaging or reheating instructions for flight attendants."""
+        diet_instruction = f"The recipe should be {diet_preference.lower()}." if diet_preference != "None" else ""
+        cuisine_instruction = f"The recipe should be {cuisine_preference} cuisine." if cuisine_preference != "Any" else ""
         
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {
                     "role": "user",
-                    "content": prompt
+                    "content": f"Create a recipe using these ingredients: {', '.join(items)}. {diet_instruction} {cuisine_instruction} Provide the recipe name, ingredients with quantities, and step-by-step instructions."
                 }
             ],
-            max_tokens=800
+            max_tokens=500
         )
         
         return response.choices[0].message.content
@@ -87,7 +77,7 @@ def generate_recipe(items, flight_type, class_type, dietary_requirements, destin
         return "Unable to generate recipe. Please try again."
 
 def main():
-    st.title("EKFC Flight Catering Recipe Generator")
+    st.title("Chef's Fridge Recipe Generator")
     
     if 'images' not in st.session_state:
         st.session_state.images = []
@@ -95,18 +85,18 @@ def main():
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.header("Ingredient Inventory")
+        st.header("Fridge Contents")
         image_option = st.radio("Choose an option:", ("Take Pictures", "Upload Images"))
         
         if image_option == "Take Pictures":
-            camera_image = st.camera_input("Take a picture of catering ingredients")
+            camera_image = st.camera_input("Take a picture of your fridge contents")
             if camera_image:
                 new_image = Image.open(camera_image)
                 if not is_duplicate(new_image, st.session_state.images):
                     st.session_state.images.append(new_image)
                     st.success("Image added successfully!")
         else:
-            uploaded_files = st.file_uploader("Upload ingredient images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+            uploaded_files = st.file_uploader("Upload fridge images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
             if uploaded_files:
                 new_images = 0
                 duplicates = 0
@@ -126,19 +116,19 @@ def main():
         if st.session_state.images:
             st.subheader("Captured/Uploaded Images")
             for i, img in enumerate(st.session_state.images):
-                st.image(img, caption=f'Ingredient Image {i+1}', use_column_width=True)
+                st.image(img, caption=f'Fridge Content Image {i+1}', use_column_width=True)
             
             if st.button('Clear All Images'):
                 st.session_state.images = []
                 st.experimental_rerun()
             
             if st.button('Identify Ingredients'):
-                with st.spinner('Analyzing ingredient inventory...'):
+                with st.spinner('Analyzing fridge contents...'):
                     identified_items = identify_items(st.session_state.images)
                     st.session_state.ingredients = identified_items
     
     with col2:
-        st.header("Flight Menu Planning")
+        st.header("Ingredients and Recipe")
         
         if 'ingredients' in st.session_state:
             st.subheader("Identified Ingredients")
@@ -149,25 +139,21 @@ def main():
             st.subheader("Final Ingredient List")
             st.write(", ".join(st.session_state.ingredients))
             
-            # Flight-specific options
-            st.subheader("Flight Details")
-            flight_type = st.selectbox("Flight Type:", ["International", "National", "Lounge Service"])
-            class_type = st.selectbox("Class:", ["First Class", "Business Class", "Economy Class"])
-            destination = st.text_input("Destination:")
+            # Dietary Preferences
+            st.subheader("Dietary Preferences")
+            diet_options = ["None", "Vegetarian", "Vegan", "Gluten-Free", "Keto", "Low-Carb", "Paleo"]
+            diet_preference = st.selectbox("Select dietary preference:", diet_options)
             
-            # Dietary Requirements
-            st.subheader("Dietary Requirements")
-            dietary_options = ["Standard", "Halal", "Kosher", "Vegetarian", "Vegan", "Gluten-Free", "Low-Sodium", "Diabetic"]
-            dietary_requirements = st.multiselect("Select dietary requirements:", dietary_options)
+            cuisine_options = ["Any", "Italian", "Mexican", "Asian", "Mediterranean", "American", "Indian", "French"]
+            cuisine_preference = st.selectbox("Select cuisine preference:", cuisine_options)
             
-            if st.button('Generate Flight Menu'):
-                with st.spinner('Crafting your in-flight menu...'):
-                    recipe = generate_recipe(st.session_state.ingredients, flight_type, class_type, 
-                                             ", ".join(dietary_requirements), destination)
-                    st.subheader("Your In-Flight Menu")
+            if st.button('Generate Recipe'):
+                with st.spinner('Crafting your recipe...'):
+                    recipe = generate_recipe(st.session_state.ingredients, diet_preference, cuisine_preference)
+                    st.subheader("Your Recipe")
                     st.write(recipe)
         else:
-            st.info("Take or upload pictures of catering ingredients, then click 'Identify Ingredients' to start.")
+            st.info("Take or upload pictures of your fridge contents, then click 'Identify Ingredients' to start.")
 
 if __name__ == "__main__":
     main()
