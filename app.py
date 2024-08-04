@@ -62,38 +62,65 @@ def generate_recipe(items):
 def main():
     st.title("Chef's Fridge Recipe Generator")
     
-    # Use camera input instead of file uploader
-    camera_image = st.camera_input("Take a picture of your fridge contents")
+    # Image input options
+    input_option = st.radio("Choose input method:", ("Upload Image", "Take Picture"))
     
-    if camera_image is not None:
-        image = Image.open(camera_image)
-        st.image(image, caption='Fridge Contents', use_column_width=True)
-        
+    if input_option == "Upload Image":
+        uploaded_file = st.file_uploader("Upload fridge image", type=["jpg", "jpeg", "png"])
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            st.image(image, caption='Fridge Contents', use_column_width=True)
+            st.session_state.current_image = image
+    else:
+        camera_image = st.camera_input("Take a picture of your fridge contents")
+        if camera_image is not None:
+            image = Image.open(camera_image)
+            st.image(image, caption='Fridge Contents', use_column_width=True)
+            st.session_state.current_image = image
+    
+    if 'current_image' in st.session_state:
         if st.button('Identify Ingredients'):
             with st.spinner('Analyzing fridge contents...'):
-                identified_items = identify_items(image)
+                identified_items = identify_items(st.session_state.current_image)
                 st.session_state.identified_items = identified_items
     
     if 'identified_items' in st.session_state and st.session_state.identified_items:
-        st.subheader("Available Ingredients")
+        st.subheader("Identified Ingredients")
+        
+        # Allow chef to edit identified ingredients
+        edited_items = st.text_area("Edit ingredients (one per line):", 
+                                    value='\n'.join(st.session_state.identified_items))
+        current_items = edited_items.split('\n')
+        
+        # Allow chef to add new ingredients
+        new_item = st.text_input("Add a new ingredient:")
+        if st.button("Add Ingredient"):
+            if new_item and new_item not in current_items:
+                current_items.append(new_item)
+        
+        # Allow chef to remove ingredients
+        item_to_remove = st.selectbox("Select an ingredient to remove:", 
+                                      [""] + current_items)
+        if st.button("Remove Ingredient"):
+            if item_to_remove in current_items:
+                current_items.remove(item_to_remove)
+        
+        # Update the list of ingredients
+        st.session_state.identified_items = [item for item in current_items if item]
+        
+        st.subheader("Final Ingredient List")
         st.write(", ".join(st.session_state.identified_items))
         
-        selected_items = st.multiselect(
-            "Select ingredients for your recipe:",
-            st.session_state.identified_items,
-            default=st.session_state.identified_items
-        )
-        
         if st.button('Generate Recipe'):
-            if selected_items:
+            if st.session_state.identified_items:
                 with st.spinner('Crafting your recipe...'):
-                    recipe = generate_recipe(selected_items)
+                    recipe = generate_recipe(st.session_state.identified_items)
                     st.subheader("Your Recipe")
                     st.write(recipe)
             else:
-                st.warning("Please select at least one ingredient.")
+                st.warning("Please add at least one ingredient.")
     else:
-        st.info("Take a picture of your fridge contents and click 'Identify Ingredients' to start.")
+        st.info("Upload an image or take a picture of your fridge contents, then click 'Identify Ingredients' to start.")
 
 if __name__ == "__main__":
     main()
