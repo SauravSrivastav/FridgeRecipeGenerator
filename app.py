@@ -2,15 +2,15 @@ import streamlit as st
 from PIL import Image
 import io
 import base64
-from openai import OpenAI
 import os
 from dotenv import load_dotenv
+import openai
 
 # Load environment variables
 load_dotenv()
 
 # Set up OpenAI client with the API key from environment variable
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Set page config
 st.set_page_config(page_title="Chef's Fridge Recipe Generator", page_icon="🍳", layout="wide")
@@ -60,8 +60,8 @@ def identify_items(image):
     base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
     
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = openai.ChatCompletion.create(
+            model="gpt-4-vision-preview",
             messages=[
                 {
                     "role": "user",
@@ -74,7 +74,7 @@ def identify_items(image):
             max_tokens=300
         )
         
-        items = response.choices[0].message.content.split(',')
+        items = response.choices[0].message['content'].split(',')
         return [item.strip() for item in items]
     except Exception as e:
         st.error(f"An error occurred while identifying items: {str(e)}")
@@ -82,8 +82,8 @@ def identify_items(image):
 
 def generate_recipe(items):
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[
                 {
                     "role": "user",
@@ -93,7 +93,7 @@ def generate_recipe(items):
             max_tokens=500
         )
         
-        return response.choices[0].message.content
+        return response.choices[0].message['content']
     except Exception as e:
         st.error(f"An error occurred while generating the recipe: {str(e)}")
         return "Unable to generate recipe. Please try again."
