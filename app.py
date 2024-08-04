@@ -5,6 +5,7 @@ import base64
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+import imagehash
 
 # Load environment variables
 load_dotenv()
@@ -14,6 +15,16 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Set page config
 st.set_page_config(page_title="Chef's Fridge Recipe Generator", layout="wide")
+
+def image_hash(image):
+    return str(imagehash.average_hash(image))
+
+def is_duplicate(new_image, existing_images):
+    new_hash = image_hash(new_image)
+    for img in existing_images:
+        if image_hash(img) == new_hash:
+            return True
+    return False
 
 def identify_items(images):
     all_items = []
@@ -65,26 +76,37 @@ def generate_recipe(items):
 def main():
     st.title("Chef's Fridge Recipe Generator")
     
+    if 'images' not in st.session_state:
+        st.session_state.images = []
+    
     col1, col2 = st.columns([1, 1])
     
     with col1:
         st.header("Fridge Contents")
         image_option = st.radio("Choose an option:", ("Take Pictures", "Upload Images"))
         
-        if 'images' not in st.session_state:
-            st.session_state.images = []
-        
         if image_option == "Take Pictures":
             camera_image = st.camera_input("Take a picture of your fridge contents")
             if camera_image:
-                st.session_state.images.append(Image.open(camera_image))
-                st.success(f"Image {len(st.session_state.images)} added successfully!")
+                new_image = Image.open(camera_image)
+                if not is_duplicate(new_image, st.session_state.images):
+                    st.session_state.images.append(new_image)
+                    st.success(f"Image {len(st.session_state.images)} added successfully!")
+                else:
+                    st.warning("This image is a duplicate and was not added.")
         else:
             uploaded_files = st.file_uploader("Upload fridge images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
             if uploaded_files:
+                new_images = 0
                 for uploaded_file in uploaded_files:
-                    st.session_state.images.append(Image.open(uploaded_file))
-                st.success(f"{len(uploaded_files)} image(s) uploaded successfully!")
+                    new_image = Image.open(uploaded_file)
+                    if not is_duplicate(new_image, st.session_state.images):
+                        st.session_state.images.append(new_image)
+                        new_images += 1
+                    else:
+                        st.warning(f"Image '{uploaded_file.name}' is a duplicate and was not added.")
+                if new_images > 0:
+                    st.success(f"{new_images} new image(s) uploaded successfully!")
         
         if st.session_state.images:
             st.subheader("Captured/Uploaded Images")
