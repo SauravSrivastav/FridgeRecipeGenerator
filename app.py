@@ -91,22 +91,24 @@ def main():
                 new_image = Image.open(camera_image)
                 if not is_duplicate(new_image, st.session_state.images):
                     st.session_state.images.append(new_image)
-                    st.success(f"Image {len(st.session_state.images)} added successfully!")
-                else:
-                    st.warning("This image is a duplicate and was not added.")
+                    st.success("Image added successfully!")
         else:
             uploaded_files = st.file_uploader("Upload fridge images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
             if uploaded_files:
                 new_images = 0
+                duplicates = 0
                 for uploaded_file in uploaded_files:
                     new_image = Image.open(uploaded_file)
                     if not is_duplicate(new_image, st.session_state.images):
                         st.session_state.images.append(new_image)
                         new_images += 1
                     else:
-                        st.warning(f"Image '{uploaded_file.name}' is a duplicate and was not added.")
+                        duplicates += 1
+                
                 if new_images > 0:
-                    st.success(f"{new_images} new image(s) uploaded successfully!")
+                    st.success(f"{new_images} new image(s) added successfully!")
+                if duplicates > 0:
+                    st.info(f"{duplicates} duplicate image(s) were not added.")
         
         if st.session_state.images:
             st.subheader("Captured/Uploaded Images")
