@@ -62,42 +62,49 @@ def generate_recipe(items):
 def main():
     st.title("Chef's Fridge Recipe Generator")
     
+    # Initialize session state
+    if 'stage' not in st.session_state:
+        st.session_state.stage = 'input'
+    
     # Step 1: Image Input
-    st.header("Step 1: Fridge Image")
-    input_option = st.radio("Choose input method:", ("Upload Image", "Take Picture"))
-    
-    if input_option == "Upload Image":
-        uploaded_file = st.file_uploader("Upload fridge image", type=["jpg", "jpeg", "png"])
-        if uploaded_file is not None:
-            st.session_state.current_image = Image.open(uploaded_file)
-    else:
-        camera_image = st.camera_input("Take a picture of your fridge contents")
-        if camera_image is not None:
-            st.session_state.current_image = Image.open(camera_image)
-    
-    if 'current_image' in st.session_state:
-        st.image(st.session_state.current_image, caption='Fridge Contents', use_column_width=True)
+    if st.session_state.stage == 'input':
+        st.header("Step 1: Fridge Image")
+        input_option = st.radio("Choose input method:", ("Upload Image", "Take Picture"))
         
-        # Step 2: Ingredient Identification
+        if input_option == "Upload Image":
+            uploaded_file = st.file_uploader("Upload fridge image", type=["jpg", "jpeg", "png"])
+            if uploaded_file is not None:
+                st.session_state.current_image = Image.open(uploaded_file)
+                st.session_state.stage = 'identify'
+        else:
+            camera_image = st.camera_input("Take a picture of your fridge contents")
+            if camera_image is not None:
+                st.session_state.current_image = Image.open(camera_image)
+                st.session_state.stage = 'identify'
+    
+    # Step 2: Ingredient Identification
+    if st.session_state.stage == 'identify':
         st.header("Step 2: Identify Ingredients")
+        st.image(st.session_state.current_image, caption='Fridge Contents', use_column_width=True)
         if st.button('Identify Ingredients'):
             with st.spinner('Analyzing fridge contents...'):
                 identified_items = identify_items(st.session_state.current_image)
                 st.session_state.identified_items = identified_items
-                st.session_state.confirmed = False
+                st.session_state.stage = 'confirm'
     
     # Step 3: Confirmation
-    if 'identified_items' in st.session_state and not st.session_state.get('confirmed', False):
+    if st.session_state.stage == 'confirm':
         st.header("Step 3: Confirm Ingredients")
         st.write("Here are the identified ingredients. Are they correct?")
         st.write(", ".join(st.session_state.identified_items))
-        if st.button("Yes, these are correct"):
-            st.session_state.confirmed = True
-        if st.button("No, I need to edit"):
-            st.session_state.confirmed = False
+        col1, col2 = st.columns(2)
+        if col1.button("Yes, these are correct"):
+            st.session_state.stage = 'edit'
+        if col2.button("No, I need to edit"):
+            st.session_state.stage = 'edit'
     
     # Step 4: Editing
-    if 'identified_items' in st.session_state and st.session_state.get('confirmed', False):
+    if st.session_state.stage == 'edit':
         st.header("Step 4: Edit Ingredients")
         st.write("You can add or remove ingredients here:")
         
@@ -124,18 +131,22 @@ def main():
         
         st.subheader("Final Ingredient List")
         st.write(", ".join(st.session_state.final_ingredients))
+        
+        if st.button("Proceed to Recipe Generation"):
+            st.session_state.stage = 'generate'
     
     # Step 5: Recipe Generation
-    if 'final_ingredients' in st.session_state and st.session_state.final_ingredients:
+    if st.session_state.stage == 'generate':
         st.header("Step 5: Generate Recipe")
         if st.button('Generate Recipe'):
             with st.spinner('Crafting your recipe...'):
                 recipe = generate_recipe(st.session_state.final_ingredients)
                 st.subheader("Your Recipe")
                 st.write(recipe)
-    
-    if 'current_image' not in st.session_state:
-        st.info("Start by uploading an image or taking a picture of your fridge contents.")
+        
+        if st.button("Start Over"):
+            st.session_state.clear()
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
