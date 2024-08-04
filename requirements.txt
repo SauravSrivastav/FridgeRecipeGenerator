@@ -1,4 +1,4 @@
-streamlit
-pillow
-openai
-dotenv
+streamlit==1.37.0
+pillow==10.4.0
+openai==1.38.0
+python-dotenv==1.0.0
